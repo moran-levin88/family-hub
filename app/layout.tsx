@@ -10,8 +10,14 @@ const rubik = Rubik({
 });
 
 export const metadata: Metadata = {
-  title: "Family Hub",
-  description: "ניהול משק בית משותף",
+  title: "משפחת לוין",
+  description: "ניהול משק בית משפחתי",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "משפחת לוין",
+  },
 };
 
 export const viewport: Viewport = {
@@ -26,6 +32,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="he" dir="rtl">
+      <head>
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </head>
       <body className={`${rubik.variable} font-sans antialiased`}>
         <main className="max-w-lg mx-auto min-h-screen pb-20">{children}</main>
         <Navigation />
