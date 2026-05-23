@@ -5,7 +5,8 @@ import { addEventToCalendar } from "@/lib/google-calendar";
 import type { Member } from "@/types";
 
 export async function POST(request: NextRequest) {
-  const { title, date, time } = await request.json();
+  const { title, date, time, assignedTo } = await request.json();
+  const filterByMembers: string[] | null = assignedTo?.length > 0 ? assignedTo : null;
 
   const membersSnap = await getDocs(collection(db, "members"));
   const results: { member: string; success: boolean }[] = [];
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
   for (const memberDoc of membersSnap.docs) {
     const member = { id: memberDoc.id, ...memberDoc.data() } as Member;
     if (!member.googleTokens?.access_token) continue;
+    if (filterByMembers && !filterByMembers.includes(member.id)) continue;
 
     try {
       const updatedTokens = await addEventToCalendar(member.googleTokens, { title, date, time });

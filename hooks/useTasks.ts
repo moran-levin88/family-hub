@@ -38,7 +38,7 @@ export function useTasks() {
       fetch("/api/calendar/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: task.title, date: task.date, time: task.time }),
+        body: JSON.stringify({ title: task.title, date: task.date, time: task.time, assignedTo: task.assignedTo ?? [] }),
       }).catch(() => {});
     }
   };

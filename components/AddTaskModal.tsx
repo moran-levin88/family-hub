@@ -1,6 +1,7 @@
 "use client";
 import { useState, FormEvent } from "react";
 import { Task, TaskType } from "@/types";
+import { useMembers } from "@/hooks/useMembers";
 import { X, CheckSquare, Calendar } from "lucide-react";
 
 interface Props {
@@ -11,11 +12,19 @@ interface Props {
 export default function AddTaskModal({ onAdd, onClose }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const currentTime = new Date().toTimeString().slice(0, 5);
+  const { members } = useMembers();
 
   const [type, setType] = useState<TaskType>("task");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(today);
   const [time, setTime] = useState(currentTime);
+  const [assignedTo, setAssignedTo] = useState<string[]>([]);
+
+  const toggleMember = (id: string) => {
+    setAssignedTo((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
+    );
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -24,7 +33,7 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
       title: title.trim(),
       type,
       completed: false,
-      ...(type === "event" ? { date, time } : {}),
+      ...(type === "event" ? { date, time, assignedTo } : {}),
     });
     onClose();
   };
@@ -52,9 +61,7 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
             type="button"
             onClick={() => setType("task")}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-              type === "task"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "text-slate-500"
+              type === "task" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
             }`}
           >
             <CheckSquare size={16} />
@@ -64,9 +71,7 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
             type="button"
             onClick={() => setType("event")}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-              type === "event"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "text-slate-500"
+              type === "event" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
             }`}
           >
             <Calendar size={16} />
@@ -99,33 +104,74 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
           </div>
 
           {type === "event" && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  תאריך
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  min={today}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    תאריך
+                  </label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    min={today}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    שעה
+                  </label>
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  שעה
-                </label>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
+
+              {members.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    מי מוזמן?
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {members.map((member) => {
+                      const selected = assignedTo.includes(member.id);
+                      return (
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => toggleMember(member.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-95 ${
+                            selected
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-slate-50 text-slate-600 border-slate-200"
+                          }`}
+                        >
+                          <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                              selected ? "bg-blue-500" : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
+                            {member.name[0]}
+                          </span>
+                          {member.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1.5">
+                    {assignedTo.length === 0
+                      ? "לא נבחר אף אחד — האירוע יסונכרן לכל הקלנדרים המחוברים"
+                      : "האירוע יסונכרן רק לקלנדרים שנבחרו"}
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex gap-3 pt-2">

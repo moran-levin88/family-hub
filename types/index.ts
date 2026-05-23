@@ -23,6 +23,7 @@ export interface Task {
   time?: string;
   completed: boolean;
   createdAt: string;
+  assignedTo?: string[];
 }
 
 export interface ShoppingItem {
