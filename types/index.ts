@@ -1,5 +1,22 @@
 export type TaskType = "task" | "event";
 
+export type ProjectColor = "blue" | "green" | "purple" | "orange" | "pink";
+
+export interface Project {
+  id: string;
+  name: string;
+  color: ProjectColor;
+  createdAt: string;
+}
+
+export const PROJECT_COLORS: Record<ProjectColor, { bg: string; text: string; light: string }> = {
+  blue:   { bg: "bg-blue-500",    text: "text-blue-600",    light: "bg-blue-50" },
+  green:  { bg: "bg-emerald-500", text: "text-emerald-600", light: "bg-emerald-50" },
+  purple: { bg: "bg-purple-500",  text: "text-purple-600",  light: "bg-purple-50" },
+  orange: { bg: "bg-orange-500",  text: "text-orange-600",  light: "bg-orange-50" },
+  pink:   { bg: "bg-pink-500",    text: "text-pink-600",    light: "bg-pink-50" },
+};
+
 export interface GoogleTokens {
   access_token: string;
   refresh_token?: string;
@@ -25,6 +42,7 @@ export interface Task {
   completed: boolean;
   createdAt: string;
   assignedTo?: string[];
+  projectId?: string;
 }
 
 export interface ShoppingItem {

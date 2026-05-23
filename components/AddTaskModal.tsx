@@ -7,9 +7,10 @@ import { X, CheckSquare, Calendar } from "lucide-react";
 interface Props {
   onAdd: (task: Omit<Task, "id" | "createdAt">) => void;
   onClose: () => void;
+  taskOnly?: boolean;
 }
 
-export default function AddTaskModal({ onAdd, onClose }: Props) {
+export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const currentTime = new Date().toTimeString().slice(0, 5);
   const { members } = useMembers();
@@ -60,7 +61,7 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
         </div>
 
         {/* Type toggle */}
-        <div className="flex bg-slate-100 rounded-xl p-1 mb-5">
+        {!taskOnly && <div className="flex bg-slate-100 rounded-xl p-1 mb-5">
           <button
             type="button"
             onClick={() => setType("task")}
@@ -81,13 +82,13 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
             <Calendar size={16} />
             אירוע
           </button>
-        </div>
+        </div>}
 
-        <p className="text-xs text-slate-400 mb-4 -mt-2">
+        {!taskOnly && <p className="text-xs text-slate-400 mb-4 -mt-2">
           {type === "task"
             ? "משימה ללא מועד מוגדר — למשל: לקנות בגד ים"
             : "אירוע עם תאריך ושעה — ישתלב עם Google Calendar"}
-        </p>
+        </p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
