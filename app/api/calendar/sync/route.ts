@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   const filterByMembers: string[] | null = assignedTo?.length > 0 ? assignedTo : null;
 
   const membersSnap = await getDocs(collection(db, "members"));
-  const results: { member: string; success: boolean }[] = [];
+  const results: { memberId: string; member: string; success: boolean; eventId?: string }[] = [];
 
   for (const memberDoc of membersSnap.docs) {
     const member = { id: memberDoc.id, ...memberDoc.data() } as Member;
@@ -17,18 +17,14 @@ export async function POST(request: NextRequest) {
     if (filterByMembers && !filterByMembers.includes(member.id)) continue;
 
     try {
-      const updatedTokens = await addEventToCalendar(member.googleTokens, { title, date, time, endTime });
+      const { updatedTokens, eventId } = await addEventToCalendar(member.googleTokens, { title, date, time, endTime });
       if (updatedTokens.access_token !== member.googleTokens.access_token) {
-        await setDoc(
-          doc(db, "members", member.id),
-          { googleTokens: updatedTokens },
-          { merge: true }
-        );
+        await setDoc(doc(db, "members", member.id), { googleTokens: updatedTokens }, { merge: true });
       }
-      results.push({ member: member.name, success: true });
+      results.push({ memberId: member.id, member: member.name, success: true, eventId });
     } catch (err) {
       console.error(`Failed to sync for ${member.name}:`, err);
-      results.push({ member: member.name, success: false });
+      results.push({ memberId: member.id, member: member.name, success: false });
     }
   }
 

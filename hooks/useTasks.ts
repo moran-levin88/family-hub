@@ -30,16 +30,26 @@ export function useTasks() {
   }, []);
 
   const addTask = async (task: Omit<Task, "id" | "createdAt">) => {
-    await addDoc(collection(db, "tasks"), {
+    const docRef = await addDoc(collection(db, "tasks"), {
       ...task,
       createdAt: new Date().toISOString(),
     });
     if (task.type === "event" && task.date && task.time) {
-      fetch("/api/calendar/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: task.title, date: task.date, time: task.time, endTime: task.endTime, assignedTo: task.assignedTo ?? [] }),
-      }).catch(() => {});
+      try {
+        const res = await fetch("/api/calendar/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: task.title, date: task.date, time: task.time, endTime: task.endTime, assignedTo: task.assignedTo ?? [] }),
+        });
+        const data = await res.json();
+        const calendarEventIds: Record<string, string> = {};
+        for (const r of data.synced ?? []) {
+          if (r.success && r.eventId) calendarEventIds[r.memberId] = r.eventId;
+        }
+        if (Object.keys(calendarEventIds).length > 0) {
+          await updateDoc(doc(db, "tasks", docRef.id), { calendarEventIds });
+        }
+      } catch {}
     }
   };
 
@@ -50,6 +60,14 @@ export function useTasks() {
   };
 
   const deleteTask = async (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (task?.type === "event" && task.calendarEventIds && Object.keys(task.calendarEventIds).length > 0) {
+      fetch("/api/calendar/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ calendarEventIds: task.calendarEventIds }),
+      }).catch(() => {});
+    }
     await deleteDoc(doc(db, "tasks", id));
   };
 

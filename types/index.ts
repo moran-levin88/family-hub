@@ -43,6 +43,7 @@ export interface Task {
   createdAt: string;
   assignedTo?: string[];
   projectId?: string;
+  calendarEventIds?: Record<string, string>;
 }
 
 export interface ShoppingItem {
