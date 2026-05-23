@@ -34,15 +34,17 @@ export async function addEventToCalendar(
 
   const calendar = google.calendar({ version: "v3", auth: client });
 
-  const startDateTime = new Date(`${event.date}T${event.time}:00`);
-  const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+  const startDateTimeStr = `${event.date}T${event.time}:00`;
+  const [h, m] = event.time.split(":").map(Number);
+  const endH = String((h + 1) % 24).padStart(2, "0");
+  const endDateTimeStr = `${event.date}T${endH}:${String(m).padStart(2, "0")}:00`;
 
   await calendar.events.insert({
     calendarId: "primary",
     requestBody: {
       summary: event.title,
-      start: { dateTime: startDateTime.toISOString(), timeZone: "Asia/Jerusalem" },
-      end: { dateTime: endDateTime.toISOString(), timeZone: "Asia/Jerusalem" },
+      start: { dateTime: startDateTimeStr, timeZone: "Asia/Jerusalem" },
+      end: { dateTime: endDateTimeStr, timeZone: "Asia/Jerusalem" },
     },
   });
 
