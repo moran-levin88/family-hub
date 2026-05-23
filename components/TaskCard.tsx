@@ -25,14 +25,19 @@ function formatTaskDate(dateStr: string): string {
 }
 
 function buildGCalUrl(task: Task & { date: string; time: string }): string {
-  const start = new Date(`${task.date}T${task.time}:00`);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
-  const fmt = (d: Date) =>
-    d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const pad = (s: string) => s.replace(/[-:]/g, "");
+  const startStr = `${task.date}T${task.time}:00`.replace(/[-:]/g, "").replace("T", "T");
+  const endTime = task.endTime ?? (() => {
+    const [h, m] = task.time.split(":").map(Number);
+    return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  })();
+  const endStr = `${task.date}T${endTime}:00`.replace(/[-:]/g, "");
+  const fmtStart = pad(task.date) + "T" + pad(task.time) + "00";
+  const fmtEnd = pad(task.date) + "T" + pad(endTime) + "00";
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: task.title,
-    dates: `${fmt(start)}/${fmt(end)}`,
+    dates: `${fmtStart}/${fmtEnd}`,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
@@ -82,7 +87,7 @@ export default function TaskCard({ task, onToggle, onDelete }: TaskCardProps) {
                 </span>
                 <span className="flex items-center gap-1 text-xs text-slate-500">
                   <Clock size={11} />
-                  {task.time}
+                  {task.time}{task.endTime ? `–${task.endTime}` : ""}
                 </span>
               </div>
               {!task.completed && (
