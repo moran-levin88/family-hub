@@ -18,6 +18,10 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(today);
   const [time, setTime] = useState(currentTime);
+  const [endTime, setEndTime] = useState(() => {
+    const [h, m] = currentTime.split(":").map(Number);
+    return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  });
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
 
   const toggleMember = (id: string) => {
@@ -33,7 +37,7 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
       title: title.trim(),
       type,
       completed: false,
-      ...(type === "event" ? { date, time, assignedTo } : {}),
+      ...(type === "event" ? { date, time, endTime, assignedTo } : {}),
     });
     onClose();
   };
@@ -105,28 +109,40 @@ export default function AddTaskModal({ onAdd, onClose }: Props) {
 
           {type === "event" && (
             <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  תאריך
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  min={today}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    תאריך
+                    שעת התחלה
                   </label>
                   <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    min={today}
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
                     className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    שעה
+                    שעת סיום
                   </label>
                   <input
                     type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
                     className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />

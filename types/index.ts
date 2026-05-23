@@ -21,6 +21,7 @@ export interface Task {
   type: TaskType;
   date?: string;
   time?: string;
+  endTime?: string;
   completed: boolean;
   createdAt: string;
   assignedTo?: string[];

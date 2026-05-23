@@ -27,7 +27,7 @@ export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens>
 
 export async function addEventToCalendar(
   tokens: GoogleTokens,
-  event: { title: string; date: string; time: string }
+  event: { title: string; date: string; time: string; endTime?: string }
 ): Promise<GoogleTokens> {
   const client = getOAuthClient();
   client.setCredentials(tokens);
@@ -35,9 +35,11 @@ export async function addEventToCalendar(
   const calendar = google.calendar({ version: "v3", auth: client });
 
   const startDateTimeStr = `${event.date}T${event.time}:00`;
-  const [h, m] = event.time.split(":").map(Number);
-  const endH = String((h + 1) % 24).padStart(2, "0");
-  const endDateTimeStr = `${event.date}T${endH}:${String(m).padStart(2, "0")}:00`;
+  const resolvedEndTime = event.endTime ?? (() => {
+    const [h, m] = event.time.split(":").map(Number);
+    return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  })();
+  const endDateTimeStr = `${event.date}T${resolvedEndTime}:00`;
 
   await calendar.events.insert({
     calendarId: "primary",

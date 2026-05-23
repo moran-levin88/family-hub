@@ -5,7 +5,7 @@ import { addEventToCalendar } from "@/lib/google-calendar";
 import type { Member } from "@/types";
 
 export async function POST(request: NextRequest) {
-  const { title, date, time, assignedTo } = await request.json();
+  const { title, date, time, endTime, assignedTo } = await request.json();
   const filterByMembers: string[] | null = assignedTo?.length > 0 ? assignedTo : null;
 
   const membersSnap = await getDocs(collection(db, "members"));
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (filterByMembers && !filterByMembers.includes(member.id)) continue;
 
     try {
-      const updatedTokens = await addEventToCalendar(member.googleTokens, { title, date, time });
+      const updatedTokens = await addEventToCalendar(member.googleTokens, { title, date, time, endTime });
       if (updatedTokens.access_token !== member.googleTokens.access_token) {
         await setDoc(
           doc(db, "members", member.id),
