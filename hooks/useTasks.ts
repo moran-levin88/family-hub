@@ -34,6 +34,13 @@ export function useTasks() {
       ...task,
       createdAt: new Date().toISOString(),
     });
+    if (task.type === "event" && task.date && task.time) {
+      fetch("/api/calendar/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: task.title, date: task.date, time: task.time }),
+      }).catch(() => {});
+    }
   };
 
   const toggleTask = async (id: string) => {

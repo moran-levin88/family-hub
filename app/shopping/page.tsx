@@ -8,7 +8,7 @@ import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight } from "lucide-re
 export default function ShoppingPage() {
   const { items, loaded, addItem, toggleItem, deleteItem, clearPurchased } = useShopping();
   const [inputName, setInputName] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<ShoppingCategory>("other");
+  const [selectedCategory, setSelectedCategory] = useState<ShoppingCategory>("supermarket");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(Object.keys(CATEGORY_LABELS))
@@ -90,7 +90,7 @@ export default function ShoppingPage() {
           onClick={() => setShowCategoryPicker(!showCategoryPicker)}
           className="flex items-center gap-1 mt-3 text-sm text-slate-500"
         >
-          קטגוריה:{" "}
+          חנות:{" "}
           <span className="text-slate-700 font-medium">
             {CATEGORY_LABELS[selectedCategory]}
           </span>
@@ -103,7 +103,7 @@ export default function ShoppingPage() {
         </button>
 
         {showCategoryPicker && (
-          <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="grid grid-cols-2 gap-2 mt-3">
             {(Object.entries(CATEGORY_LABELS) as [ShoppingCategory, string][]).map(
               ([key, label]) => (
                 <button

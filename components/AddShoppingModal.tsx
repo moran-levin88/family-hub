@@ -10,7 +10,7 @@ interface Props {
 
 export default function AddShoppingModal({ onAdd, onClose }: Props) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<ShoppingCategory>("other");
+  const [category, setCategory] = useState<ShoppingCategory>("supermarket");
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -54,9 +54,9 @@ export default function AddShoppingModal({ onAdd, onClose }: Props) {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              קטגוריה
+              איפה לקנות?
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {(
                 Object.entries(CATEGORY_LABELS) as [ShoppingCategory, string][]
               ).map(([key, label]) => (

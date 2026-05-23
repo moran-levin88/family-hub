@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingCart, CalendarDays } from "lucide-react";
+import { Home, ShoppingCart, CalendarDays, Settings } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "בית", icon: Home },
   { href: "/shopping", label: "קניות", icon: ShoppingCart },
   { href: "/tasks", label: "משימות", icon: CalendarDays },
+  { href: "/settings", label: "הגדרות", icon: Settings },
 ];
 
 export default function Navigation() {

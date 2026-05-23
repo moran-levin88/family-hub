@@ -1,5 +1,20 @@
 export type TaskType = "task" | "event";
 
+export interface GoogleTokens {
+  access_token: string;
+  refresh_token?: string;
+  expiry_date?: number;
+  token_type?: string;
+  scope?: string;
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  createdAt: string;
+  googleTokens?: GoogleTokens;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -18,31 +33,18 @@ export interface ShoppingItem {
   createdAt: string;
 }
 
-export type ShoppingCategory =
-  | "vegetables"
-  | "dairy"
-  | "meat"
-  | "bakery"
-  | "canned"
-  | "cleaning"
-  | "other";
+export type ShoppingCategory = "supermarket" | "superpharm" | "clothing" | "other";
 
 export const CATEGORY_LABELS: Record<ShoppingCategory, string> = {
-  vegetables: "🥦 ירקות ופירות",
-  dairy: "🥛 מוצרי חלב",
-  meat: "🥩 בשר ודגים",
-  bakery: "🥖 מאפים",
-  canned: "🥫 שימורים ויבשים",
-  cleaning: "🧹 ניקיון",
+  supermarket: "🛒 סופרמרקט",
+  superpharm: "💊 סופרפארם",
+  clothing: "👗 חנות בגדים",
   other: "📦 אחר",
 };
 
 export const CATEGORY_COLORS: Record<ShoppingCategory, string> = {
-  vegetables: "bg-green-100 text-green-800",
-  dairy: "bg-blue-100 text-blue-800",
-  meat: "bg-red-100 text-red-800",
-  bakery: "bg-yellow-100 text-yellow-800",
-  canned: "bg-orange-100 text-orange-800",
-  cleaning: "bg-purple-100 text-purple-800",
+  supermarket: "bg-blue-100 text-blue-800",
+  superpharm: "bg-teal-100 text-teal-800",
+  clothing: "bg-purple-100 text-purple-800",
   other: "bg-gray-100 text-gray-800",
 };
