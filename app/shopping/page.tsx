@@ -32,9 +32,14 @@ export default function ShoppingPage() {
   const pendingCount = items.filter((i) => !i.purchased).length;
   const purchasedItems = items.filter((i) => i.purchased);
 
-  const groupedPending = (Object.keys(CATEGORY_LABELS) as ShoppingCategory[]).reduce(
+  const validCategories = Object.keys(CATEGORY_LABELS) as ShoppingCategory[];
+  const groupedPending = validCategories.reduce(
     (acc, cat) => {
-      const catItems = items.filter((i) => i.category === cat && !i.purchased);
+      const catItems = items.filter((i) => {
+        if (i.purchased) return false;
+        if (cat === "other") return !validCategories.includes(i.category as ShoppingCategory) || i.category === "other";
+        return i.category === cat;
+      });
       if (catItems.length > 0) acc[cat] = catItems;
       return acc;
     },
