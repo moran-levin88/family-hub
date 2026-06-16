@@ -194,6 +194,7 @@ export default function DashboardPage() {
         <AddShoppingModal
           onAdd={addItem}
           onClose={() => setShowShoppingModal(false)}
+          existingItems={items}
         />
       )}
     </div>

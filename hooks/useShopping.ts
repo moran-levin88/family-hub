@@ -37,7 +37,7 @@ export function useShopping() {
 
   const addItem = async (
     name: string,
-    category: ShoppingCategory = "supermarket"
+    category: ShoppingCategory = "other"
   ) => {
     await addDoc(collection(db, "shopping_items"), {
       name: name.trim(),

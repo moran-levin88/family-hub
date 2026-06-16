@@ -1,20 +1,30 @@
 "use client";
 import { useState, FormEvent } from "react";
-import { ShoppingCategory, CATEGORY_LABELS } from "@/types";
-import { X } from "lucide-react";
+import { ShoppingCategory, CATEGORY_LABELS, ShoppingItem } from "@/types";
+import { X, AlertCircle } from "lucide-react";
 
 interface Props {
   onAdd: (name: string, category: ShoppingCategory) => void;
   onClose: () => void;
+  existingItems: ShoppingItem[];
 }
 
-export default function AddShoppingModal({ onAdd, onClose }: Props) {
+export default function AddShoppingModal({ onAdd, onClose, existingItems }: Props) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<ShoppingCategory>("supermarket");
+  const [category, setCategory] = useState<ShoppingCategory>("other");
+  const [duplicate, setDuplicate] = useState(false);
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    const isDup = existingItems.some(
+      (i) => !i.purchased && i.name.trim().toLowerCase() === value.trim().toLowerCase()
+    );
+    setDuplicate(isDup);
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || duplicate) return;
     onAdd(name.trim(), category);
     onClose();
   };
@@ -28,38 +38,39 @@ export default function AddShoppingModal({ onAdd, onClose }: Props) {
         <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-bold text-slate-800">הוסף לקניות</h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
-          >
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              שם המוצר
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">שם המוצר</label>
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder='לדוגמה: חלב 3%'
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base"
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="לדוגמה: חלב 3%"
+              className={`w-full border rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 text-base ${
+                duplicate
+                  ? "border-red-400 focus:ring-red-300"
+                  : "border-slate-200 focus:ring-emerald-500"
+              }`}
               autoFocus
               required
             />
+            {duplicate && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-red-500 text-xs font-medium">
+                <AlertCircle size={13} />
+                הפריט כבר מופיע ברשימה
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              איפה לקנות?
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                Object.entries(CATEGORY_LABELS) as [ShoppingCategory, string][]
-              ).map(([key, label]) => (
+            <label className="block text-sm font-medium text-slate-700 mb-2">קטגוריה</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(Object.entries(CATEGORY_LABELS) as [ShoppingCategory, string][]).map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -86,7 +97,8 @@ export default function AddShoppingModal({ onAdd, onClose }: Props) {
             </button>
             <button
               type="submit"
-              className="flex-1 bg-emerald-500 text-white rounded-xl py-3.5 font-semibold active:bg-emerald-600 active:scale-95 transition-all"
+              disabled={duplicate}
+              className="flex-1 bg-emerald-500 text-white rounded-xl py-3.5 font-semibold active:bg-emerald-600 active:scale-95 transition-all disabled:opacity-40"
             >
               הוסף
             </button>

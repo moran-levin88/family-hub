@@ -3,13 +3,14 @@ import { useState, FormEvent, useRef } from "react";
 import { useShopping } from "@/hooks/useShopping";
 import ShoppingItemRow from "@/components/ShoppingItemRow";
 import { ShoppingCategory, CATEGORY_LABELS } from "@/types";
-import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 
 export default function ShoppingPage() {
   const { items, loaded, addItem, toggleItem, deleteItem, clearPurchased } = useShopping();
   const [inputName, setInputName] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<ShoppingCategory>("supermarket");
+  const [selectedCategory, setSelectedCategory] = useState<ShoppingCategory>("other");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [duplicateError, setDuplicateError] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(Object.keys(CATEGORY_LABELS))
   );
@@ -18,8 +19,13 @@ export default function ShoppingPage() {
   const handleAdd = (e: FormEvent) => {
     e.preventDefault();
     if (!inputName.trim()) return;
+    const isDup = items.some(
+      (i) => !i.purchased && i.name.trim().toLowerCase() === inputName.trim().toLowerCase()
+    );
+    if (isDup) { setDuplicateError(true); return; }
     addItem(inputName.trim(), selectedCategory);
     setInputName("");
+    setDuplicateError(false);
     inputRef.current?.focus();
   };
 
@@ -71,9 +77,11 @@ export default function ShoppingPage() {
             ref={inputRef}
             type="text"
             value={inputName}
-            onChange={(e) => setInputName(e.target.value)}
+            onChange={(e) => { setInputName(e.target.value); setDuplicateError(false); }}
             placeholder="הוסף מוצר..."
-            className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base"
+            className={`flex-1 border rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 text-base ${
+              duplicateError ? "border-red-400 focus:ring-red-300" : "border-slate-200 focus:ring-emerald-500"
+            }`}
           />
           <button
             type="submit"
@@ -84,13 +92,20 @@ export default function ShoppingPage() {
           </button>
         </div>
 
+        {duplicateError && (
+          <div className="flex items-center gap-1.5 mt-2 text-red-500 text-xs font-medium">
+            <AlertCircle size={13} />
+            הפריט כבר מופיע ברשימה
+          </div>
+        )}
+
         {/* Category picker toggle */}
         <button
           type="button"
           onClick={() => setShowCategoryPicker(!showCategoryPicker)}
           className="flex items-center gap-1 mt-3 text-sm text-slate-500"
         >
-          חנות:{" "}
+          קטגוריה:{" "}
           <span className="text-slate-700 font-medium">
             {CATEGORY_LABELS[selectedCategory]}
           </span>
@@ -103,7 +118,7 @@ export default function ShoppingPage() {
         </button>
 
         {showCategoryPicker && (
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          <div className="grid grid-cols-3 gap-2 mt-3">
             {(Object.entries(CATEGORY_LABELS) as [ShoppingCategory, string][]).map(
               ([key, label]) => (
                 <button
