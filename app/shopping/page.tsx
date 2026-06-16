@@ -3,13 +3,12 @@ import { useState, FormEvent, useRef } from "react";
 import { useShopping } from "@/hooks/useShopping";
 import ShoppingItemRow from "@/components/ShoppingItemRow";
 import { ShoppingCategory, CATEGORY_LABELS } from "@/types";
-import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
+import { detectCategory } from "@/lib/category-detector";
+import { Plus, Trash2, ShoppingCart, ChevronRight, AlertCircle } from "lucide-react";
 
 export default function ShoppingPage() {
   const { items, loaded, addItem, toggleItem, deleteItem, clearPurchased } = useShopping();
   const [inputName, setInputName] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<ShoppingCategory>("other");
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [duplicateError, setDuplicateError] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(Object.keys(CATEGORY_LABELS))
@@ -23,7 +22,7 @@ export default function ShoppingPage() {
       (i) => !i.purchased && i.name.trim().toLowerCase() === inputName.trim().toLowerCase()
     );
     if (isDup) { setDuplicateError(true); return; }
-    addItem(inputName.trim(), selectedCategory);
+    addItem(inputName.trim(), detectCategory(inputName.trim()));
     setInputName("");
     setDuplicateError(false);
     inputRef.current?.focus();
@@ -57,7 +56,6 @@ export default function ShoppingPage() {
 
   return (
     <div className="px-4 pt-6">
-      {/* Header */}
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
           <ShoppingCart className="text-emerald-500" size={28} />
@@ -65,18 +63,13 @@ export default function ShoppingPage() {
         </h1>
         <p className="text-slate-500 text-sm mt-0.5">
           {pendingCount === 0
-            ? loaded
-              ? "כל הפריטים נרכשו! 🎉"
-              : "טוען..."
+            ? loaded ? "כל הפריטים נרכשו! 🎉" : "טוען..."
             : `${pendingCount} פריטים לקניה`}
         </p>
       </div>
 
       {/* Quick add form */}
-      <form
-        onSubmit={handleAdd}
-        className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-5"
-      >
+      <form onSubmit={handleAdd} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-5">
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -96,67 +89,27 @@ export default function ShoppingPage() {
             <Plus size={22} />
           </button>
         </div>
-
         {duplicateError && (
           <div className="flex items-center gap-1.5 mt-2 text-red-500 text-xs font-medium">
             <AlertCircle size={13} />
             הפריט כבר מופיע ברשימה
           </div>
         )}
-
-        {/* Category picker toggle */}
-        <button
-          type="button"
-          onClick={() => setShowCategoryPicker(!showCategoryPicker)}
-          className="flex items-center gap-1 mt-3 text-sm text-slate-500"
-        >
-          קטגוריה:{" "}
-          <span className="text-slate-700 font-medium">
-            {CATEGORY_LABELS[selectedCategory]}
-          </span>
-          <ChevronDown
-            size={14}
-            className={`transition-transform text-slate-400 ${
-              showCategoryPicker ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {showCategoryPicker && (
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            {(Object.entries(CATEGORY_LABELS) as [ShoppingCategory, string][]).map(
-              ([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory(key);
-                    setShowCategoryPicker(false);
-                  }}
-                  className={`py-2 px-2 rounded-xl text-xs font-medium transition-all border ${
-                    selectedCategory === key
-                      ? "bg-emerald-500 text-white border-emerald-500"
-                      : "bg-slate-50 text-slate-600 border-slate-200 hover:border-emerald-300"
-                  }`}
-                >
-                  {label}
-                </button>
-              )
-            )}
-          </div>
+        {inputName.trim() && !duplicateError && (
+          <p className="mt-2 text-xs text-slate-400">
+            קטגוריה: <span className="text-slate-600 font-medium">{CATEGORY_LABELS[detectCategory(inputName)]}</span>
+          </p>
         )}
       </form>
 
       {/* Empty state */}
-      {loaded &&
-        Object.keys(groupedPending).length === 0 &&
-        purchasedItems.length === 0 && (
-          <div className="text-center py-14 text-slate-400">
-            <ShoppingCart size={52} className="mx-auto mb-3 opacity-25" />
-            <p className="font-semibold text-slate-500">הרשימה ריקה</p>
-            <p className="text-sm mt-1">הקלידו מוצר למעלה כדי להתחיל</p>
-          </div>
-        )}
+      {loaded && Object.keys(groupedPending).length === 0 && purchasedItems.length === 0 && (
+        <div className="text-center py-14 text-slate-400">
+          <ShoppingCart size={52} className="mx-auto mb-3 opacity-25" />
+          <p className="font-semibold text-slate-500">הרשימה ריקה</p>
+          <p className="text-sm mt-1">הקלידו מוצר למעלה כדי להתחיל</p>
+        </div>
+      )}
 
       {/* Grouped pending items */}
       {Object.entries(groupedPending).map(([cat, catItems]) => (
@@ -174,22 +127,14 @@ export default function ShoppingPage() {
               </span>
               <ChevronRight
                 size={16}
-                className={`text-slate-400 transition-transform ${
-                  expandedCategories.has(cat) ? "rotate-90" : ""
-                }`}
+                className={`text-slate-400 transition-transform ${expandedCategories.has(cat) ? "rotate-90" : ""}`}
               />
             </div>
           </button>
-
           {expandedCategories.has(cat) && (
             <div className="bg-white rounded-2xl divide-y divide-slate-50 overflow-hidden shadow-sm border border-slate-100">
               {catItems.map((item) => (
-                <ShoppingItemRow
-                  key={item.id}
-                  item={item}
-                  onToggle={toggleItem}
-                  onDelete={deleteItem}
-                />
+                <ShoppingItemRow key={item.id} item={item} onToggle={toggleItem} onDelete={deleteItem} />
               ))}
             </div>
           )}
@@ -200,9 +145,7 @@ export default function ShoppingPage() {
       {purchasedItems.length > 0 && (
         <div className="mt-5">
           <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-sm font-semibold text-slate-400">
-              נרכשו ({purchasedItems.length})
-            </span>
+            <span className="text-sm font-semibold text-slate-400">נרכשו ({purchasedItems.length})</span>
             <button
               onClick={clearPurchased}
               className="flex items-center gap-1 text-xs text-red-500 font-semibold py-1 px-2 rounded-lg hover:bg-red-50"
@@ -213,12 +156,7 @@ export default function ShoppingPage() {
           </div>
           <div className="bg-white rounded-2xl divide-y divide-slate-50 overflow-hidden shadow-sm border border-slate-100 opacity-60">
             {purchasedItems.map((item) => (
-              <ShoppingItemRow
-                key={item.id}
-                item={item}
-                onToggle={toggleItem}
-                onDelete={deleteItem}
-              />
+              <ShoppingItemRow key={item.id} item={item} onToggle={toggleItem} onDelete={deleteItem} />
             ))}
           </div>
         </div>
