@@ -29,7 +29,7 @@ export function useTasks() {
     return unsubscribe;
   }, []);
 
-  const addTask = async (task: Omit<Task, "id" | "createdAt">) => {
+  const addTask = async (task: Omit<Task, "id" | "createdAt">): Promise<{ syncFailed?: string[] }> => {
     const docRef = await addDoc(collection(db, "tasks"), {
       ...task,
       createdAt: new Date().toISOString(),
@@ -43,14 +43,20 @@ export function useTasks() {
         });
         const data = await res.json();
         const calendarEventIds: Record<string, string> = {};
+        const failed: string[] = [];
         for (const r of data.synced ?? []) {
           if (r.success && r.eventId) calendarEventIds[r.memberId] = r.eventId;
+          else if (!r.success) failed.push(r.member);
         }
         if (Object.keys(calendarEventIds).length > 0) {
           await updateDoc(doc(db, "tasks", docRef.id), { calendarEventIds });
         }
-      } catch {}
+        if (failed.length > 0) return { syncFailed: failed };
+      } catch {
+        return { syncFailed: ["שגיאה בחיבור לגוגל"] };
+      }
     }
+    return {};
   };
 
   const toggleTask = async (id: string) => {

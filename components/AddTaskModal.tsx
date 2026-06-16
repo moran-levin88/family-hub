@@ -5,7 +5,7 @@ import { useMembers } from "@/hooks/useMembers";
 import { X, CheckSquare, Calendar } from "lucide-react";
 
 interface Props {
-  onAdd: (task: Omit<Task, "id" | "createdAt">) => void;
+  onAdd: (task: Omit<Task, "id" | "createdAt">) => Promise<{ syncFailed?: string[] }>;
   onClose: () => void;
   taskOnly?: boolean;
 }
@@ -24,6 +24,8 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
     return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   });
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const toggleMember = (id: string) => {
     setAssignedTo((prev) =>
@@ -31,15 +33,22 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
     );
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    onAdd({
+    if (!title.trim() || submitting) return;
+    setSubmitting(true);
+    setSyncError(null);
+    const result = await onAdd({
       title: title.trim(),
       type,
       completed: false,
       ...(type === "event" ? { date, time, endTime, assignedTo } : {}),
     });
+    setSubmitting(false);
+    if (result?.syncFailed?.length) {
+      setSyncError(`הסנכרון לקלנדר של ${result.syncFailed.join(", ")} נכשל — נסו לחבר מחדש בהגדרות`);
+      return;
+    }
     onClose();
   };
 
@@ -191,6 +200,12 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
             </>
           )}
 
+          {syncError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 font-medium">
+              ⚠️ {syncError}
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -201,9 +216,10 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
             </button>
             <button
               type="submit"
-              className="flex-1 bg-blue-600 text-white rounded-xl py-3.5 font-semibold active:bg-blue-700 active:scale-95 transition-all"
+              disabled={submitting}
+              className="flex-1 bg-blue-600 text-white rounded-xl py-3.5 font-semibold active:bg-blue-700 active:scale-95 transition-all disabled:opacity-60"
             >
-              הוסף
+              {submitting ? "שומר..." : "הוסף"}
             </button>
           </div>
         </form>

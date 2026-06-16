@@ -87,14 +87,16 @@ function SettingsContent() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {!member.googleTokens?.access_token && (
-                    <a
-                      href={`/api/auth/google?memberId=${member.id}`}
-                      className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2 font-semibold whitespace-nowrap"
-                    >
-                      חבר Calendar
-                    </a>
-                  )}
+                  <a
+                    href={`/api/auth/google?memberId=${member.id}`}
+                    className={`text-xs rounded-xl px-3 py-2 font-semibold whitespace-nowrap ${
+                      member.googleTokens?.access_token
+                        ? "bg-slate-100 text-slate-600"
+                        : "bg-blue-600 text-white"
+                    }`}
+                  >
+                    {member.googleTokens?.access_token ? "חבר מחדש" : "חבר Calendar"}
+                  </a>
                   <button
                     onClick={() => deleteMember(member.id)}
                     className="p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors"

@@ -23,8 +23,8 @@ export default function ProjectPage() {
 
   const colors = project ? PROJECT_COLORS[project.color] : PROJECT_COLORS.blue;
 
-  const handleAddTask = async (task: Parameters<typeof addTask>[0]) => {
-    await addTask({ ...task, projectId });
+  const handleAddTask = (task: Parameters<typeof addTask>[0]) => {
+    return addTask({ ...task, projectId });
   };
 
   const handleDeleteProject = async () => {
