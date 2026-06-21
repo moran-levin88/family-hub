@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForTokens } from "@/lib/google-calendar";
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -15,11 +14,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const tokens = await exchangeCodeForTokens(code);
-    await setDoc(
-      doc(db, "members", memberId),
-      { googleTokens: tokens },
-      { merge: true }
-    );
+    await adminDb.collection("members").doc(memberId).set({ googleTokens: tokens }, { merge: true });
     return NextResponse.redirect(`${appUrl}/settings?connected=1`);
   } catch (err) {
     console.error("OAuth callback error:", err);

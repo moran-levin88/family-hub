@@ -2,10 +2,12 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMembers } from "@/hooks/useMembers";
-import { Plus, Trash2, CalendarCheck, CalendarX, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Plus, Trash2, CalendarCheck, CalendarX, X, LogOut } from "lucide-react";
 
 function SettingsContent() {
   const { members, loaded, addMember, deleteMember } = useMembers();
+  const { user, logout } = useAuth();
   const searchParams = useSearchParams();
   const [newName, setNewName] = useState("");
   const [banner, setBanner] = useState<"connected" | "error" | null>(null);
@@ -26,6 +28,27 @@ function SettingsContent() {
     <div className="px-4 pt-6 pb-24">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">הגדרות</h1>
       <p className="text-slate-500 text-sm mb-6">חברי המשפחה וחיבור Google Calendar</p>
+
+      {user && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3 min-w-0">
+            {user.photoURL && (
+              <img src={user.photoURL} alt="" className="w-10 h-10 rounded-full shrink-0" />
+            )}
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-800 truncate text-sm">{user.displayName}</p>
+              <p className="text-slate-400 text-xs truncate">{user.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 text-xs text-red-500 font-semibold py-2 px-3 rounded-xl hover:bg-red-50 shrink-0"
+          >
+            <LogOut size={14} />
+            התנתקות
+          </button>
+        </div>
+      )}
 
       {banner && (
         <div

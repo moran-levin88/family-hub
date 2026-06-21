@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
 import { deleteEventFromCalendar } from "@/lib/google-calendar";
 import type { Member } from "@/types";
 
@@ -11,7 +10,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ deleted: [] });
   }
 
-  const membersSnap = await getDocs(collection(db, "members"));
+  const membersSnap = await adminDb.collection("members").get();
   const results: { member: string; success: boolean }[] = [];
 
   for (const memberDoc of membersSnap.docs) {
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
     try {
       const updatedTokens = await deleteEventFromCalendar(member.googleTokens, eventId);
       if (updatedTokens.access_token !== member.googleTokens.access_token) {
-        await setDoc(doc(db, "members", member.id), { googleTokens: updatedTokens }, { merge: true });
+        await adminDb.collection("members").doc(member.id).set({ googleTokens: updatedTokens }, { merge: true });
       }
       results.push({ member: member.name, success: true });
     } catch (err) {
