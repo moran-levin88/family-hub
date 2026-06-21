@@ -2,9 +2,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import {
   GoogleAuthProvider,
-  getRedirectResult,
   onAuthStateChanged,
-  signInWithRedirect,
+  signInWithPopup,
   signOut,
   User,
 } from "firebase/auth";
@@ -31,11 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [notAllowed, setNotAllowed] = useState(false);
 
   useEffect(() => {
-    console.log("[auth] checking redirect result...");
-    getRedirectResult(auth)
-      .then((result) => console.log("[auth] getRedirectResult resolved:", result))
-      .catch((err) => console.error("[auth] getRedirectResult error:", err.code, err.message));
-
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       console.log("[auth] onAuthStateChanged fired, user:", u?.email ?? null);
       if (u && ALLOWED_EMAILS.length > 0 && !ALLOWED_EMAILS.includes((u.email ?? "").toLowerCase())) {
@@ -54,8 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async () => {
-    console.log("[auth] starting signInWithRedirect");
-    await signInWithRedirect(auth, new GoogleAuthProvider());
+    try {
+      console.log("[auth] starting signInWithPopup");
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (err: any) {
+      console.error("[auth] signInWithPopup error:", err.code, err.message);
+    }
   };
 
   const logout = async () => {
