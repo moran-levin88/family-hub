@@ -31,9 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      console.log("[auth] onAuthStateChanged fired, user:", u?.email ?? null);
       if (u && ALLOWED_EMAILS.length > 0 && !ALLOWED_EMAILS.includes((u.email ?? "").toLowerCase())) {
-        console.log("[auth] email not in allowlist:", u.email, ALLOWED_EMAILS);
         setNotAllowed(true);
         await signOut(auth);
         setUser(null);
@@ -48,12 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async () => {
-    try {
-      console.log("[auth] starting signInWithPopup");
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch (err: any) {
-      console.error("[auth] signInWithPopup error:", err.code, err.message);
-    }
+    await signInWithPopup(auth, new GoogleAuthProvider());
   };
 
   const logout = async () => {
