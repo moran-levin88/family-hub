@@ -2,8 +2,9 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import {
   GoogleAuthProvider,
+  getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   User,
 } from "firebase/auth";
@@ -30,6 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [notAllowed, setNotAllowed] = useState(false);
 
   useEffect(() => {
+    getRedirectResult(auth).catch((err) => console.error("Redirect sign-in error:", err));
+
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u && ALLOWED_EMAILS.length > 0 && !ALLOWED_EMAILS.includes((u.email ?? "").toLowerCase())) {
         setNotAllowed(true);
@@ -46,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async () => {
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    await signInWithRedirect(auth, new GoogleAuthProvider());
   };
 
   const logout = async () => {
