@@ -1,6 +1,6 @@
 "use client";
 import { useState, FormEvent } from "react";
-import { Task, TaskType } from "@/types";
+import { Task, TaskType, memberColor } from "@/types";
 import { useMembers } from "@/hooks/useMembers";
 import { X, CheckSquare, Calendar } from "lucide-react";
 
@@ -8,22 +8,27 @@ interface Props {
   onAdd: (task: Omit<Task, "id" | "createdAt">) => Promise<{ syncFailed?: string[] }>;
   onClose: () => void;
   taskOnly?: boolean;
+  task?: Task;
+  onUpdate?: (id: string, updates: Partial<Omit<Task, "id" | "createdAt">>) => Promise<{ syncFailed?: string[] }>;
 }
 
-export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
+export default function AddTaskModal({ onAdd, onClose, taskOnly, task, onUpdate }: Props) {
+  const isEdit = !!task;
   const today = new Date().toISOString().split("T")[0];
   const currentTime = new Date().toTimeString().slice(0, 5);
   const { members } = useMembers();
 
-  const [type, setType] = useState<TaskType>("task");
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(today);
-  const [time, setTime] = useState(currentTime);
+  const [type, setType] = useState<TaskType>(task?.type ?? "task");
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [date, setDate] = useState(task?.date ?? today);
+  const [time, setTime] = useState(task?.time ?? currentTime);
   const [endTime, setEndTime] = useState(() => {
-    const [h, m] = currentTime.split(":").map(Number);
+    if (task?.endTime) return task.endTime;
+    const base = task?.time ?? currentTime;
+    const [h, m] = base.split(":").map(Number);
     return `${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   });
-  const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [assignedTo, setAssignedTo] = useState<string[]>(task?.assignedTo ?? []);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,12 +43,14 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
     if (!title.trim() || submitting) return;
     setSubmitting(true);
     setSyncError(null);
-    const result = await onAdd({
+    const payload = {
       title: title.trim(),
-      type,
-      completed: false,
-      ...(type === "event" ? { date, time, endTime, assignedTo } : {}),
-    });
+      assignedTo,
+      ...(type === "event" ? { date, time, endTime } : {}),
+    };
+    const result = isEdit
+      ? await onUpdate!(task!.id, payload)
+      : await onAdd({ ...payload, type, completed: false });
     setSubmitting(false);
     if (result?.syncFailed?.length) {
       setSyncError(`הסנכרון לקלנדר של ${result.syncFailed.join(", ")} נכשל — נסו לחבר מחדש בהגדרות`);
@@ -60,7 +67,9 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
       <div className="bg-white w-full max-w-lg mx-auto rounded-t-3xl p-6 pb-10 animate-slide-up max-h-[90vh] overflow-y-auto">
         <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-slate-800">הוסף פריט</h2>
+          <h2 className="text-xl font-bold text-slate-800">
+            {isEdit ? (type === "task" ? "עריכת משימה" : "עריכת אירוע") : "הוסף פריט"}
+          </h2>
           <button
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
@@ -70,7 +79,7 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
         </div>
 
         {/* Type toggle */}
-        {!taskOnly && <div className="flex bg-slate-100 rounded-xl p-1 mb-5">
+        {!taskOnly && !isEdit && <div className="flex bg-slate-100 rounded-xl p-1 mb-5">
           <button
             type="button"
             onClick={() => setType("task")}
@@ -93,7 +102,7 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
           </button>
         </div>}
 
-        {!taskOnly && <p className="text-xs text-slate-400 mb-4 -mt-2">
+        {!taskOnly && !isEdit && <p className="text-xs text-slate-400 mb-4 -mt-2">
           {type === "task"
             ? "משימה ללא מועד מוגדר — למשל: לקנות בגד ים"
             : "אירוע עם תאריך ושעה — ישתלב עם Google Calendar"}
@@ -127,7 +136,7 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  min={today}
+                  min={isEdit ? undefined : today}
                   className="w-full border border-slate-200 rounded-xl px-3 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -158,46 +167,48 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
                   />
                 </div>
               </div>
-
-              {members.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    מי מוזמן?
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {members.map((member) => {
-                      const selected = assignedTo.includes(member.id);
-                      return (
-                        <button
-                          key={member.id}
-                          type="button"
-                          onClick={() => toggleMember(member.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-95 ${
-                            selected
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-slate-50 text-slate-600 border-slate-200"
-                          }`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                              selected ? "bg-blue-500" : "bg-slate-200 text-slate-600"
-                            }`}
-                          >
-                            {member.name[0]}
-                          </span>
-                          {member.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1.5">
-                    {assignedTo.length === 0
-                      ? "לא נבחר אף אחד — האירוע יסונכרן לכל הקלנדרים המחוברים"
-                      : "האירוע יסונכרן רק לקלנדרים שנבחרו"}
-                  </p>
-                </div>
-              )}
             </>
+          )}
+
+          {members.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                {type === "event" ? "מי מוזמן?" : "של מי המשימה?"}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {members.map((member) => {
+                  const selected = assignedTo.includes(member.id);
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => toggleMember(member.id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-95 ${
+                        selected
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-slate-50 text-slate-600 border-slate-200"
+                      }`}
+                    >
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                          selected ? "bg-blue-500" : memberColor(member.id)
+                        }`}
+                      >
+                        {member.name[0]}
+                      </span>
+                      {member.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {type === "event" && (
+                <p className="text-xs text-slate-400 mt-1.5">
+                  {assignedTo.length === 0
+                    ? "לא נבחר אף אחד — האירוע יסונכרן לכל הקלנדרים המחוברים"
+                    : "האירוע יסונכרן רק לקלנדרים שנבחרו"}
+                </p>
+              )}
+            </div>
           )}
 
           {syncError && (
@@ -219,7 +230,7 @@ export default function AddTaskModal({ onAdd, onClose, taskOnly }: Props) {
               disabled={submitting}
               className="flex-1 bg-blue-600 text-white rounded-xl py-3.5 font-semibold active:bg-blue-700 active:scale-95 transition-all disabled:opacity-60"
             >
-              {submitting ? "שומר..." : "הוסף"}
+              {submitting ? "שומר..." : isEdit ? "שמור שינויים" : "הוסף"}
             </button>
           </div>
         </form>

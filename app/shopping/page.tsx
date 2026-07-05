@@ -2,6 +2,7 @@
 import { useState, FormEvent, useRef } from "react";
 import { useShopping } from "@/hooks/useShopping";
 import ShoppingItemRow from "@/components/ShoppingItemRow";
+import { ShoppingListSkeleton } from "@/components/Skeletons";
 import { ShoppingCategory, CATEGORY_LABELS } from "@/types";
 import { detectCategory } from "@/lib/category-detector";
 import { Plus, Trash2, ShoppingCart, ChevronRight, AlertCircle } from "lucide-react";
@@ -101,6 +102,9 @@ export default function ShoppingPage() {
           </p>
         )}
       </form>
+
+      {/* Loading skeleton */}
+      {!loaded && <ShoppingListSkeleton count={5} />}
 
       {/* Empty state */}
       {loaded && Object.keys(groupedPending).length === 0 && purchasedItems.length === 0 && (

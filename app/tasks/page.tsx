@@ -2,22 +2,32 @@
 import { useState } from "react";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
+import { useMembers } from "@/hooks/useMembers";
+import { Task, memberColor } from "@/types";
 import TaskCard from "@/components/TaskCard";
 import ProjectCard from "@/components/ProjectCard";
 import AddTaskModal from "@/components/AddTaskModal";
 import AddProjectModal from "@/components/AddProjectModal";
+import UndoToast from "@/components/UndoToast";
+import { TaskListSkeleton } from "@/components/Skeletons";
 import { CalendarDays, Plus, CheckCircle2, CheckSquare, FolderOpen } from "lucide-react";
 
 type FilterType = "all" | "tasks" | "events" | "projects";
 
 export default function TasksPage() {
-  const { tasks, loaded, toggleTask, deleteTask, addTask } = useTasks();
+  const { tasks, loaded, toggleTask, deleteTask, addTask, updateTask, undoDelete, lastDeleted } = useTasks();
   const { projects, addProject, deleteProject } = useProjects();
+  const { members } = useMembers();
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
+  const [memberFilter, setMemberFilter] = useState<string | null>(null);
 
-  const standaloneTasks = tasks.filter((t) => !t.projectId);
+  const byMember = (t: Task) =>
+    !memberFilter || (t.assignedTo ?? []).includes(memberFilter);
+
+  const standaloneTasks = tasks.filter((t) => !t.projectId && byMember(t));
   const pendingTasks = standaloneTasks.filter((t) => !t.completed && t.type === "task");
   const completedTasks = standaloneTasks.filter((t) => t.completed && t.type === "task");
 
@@ -36,10 +46,11 @@ export default function TasksPage() {
     groupedEvents[key].push(task);
   });
 
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const formatGroupDate = (dateStr: string): string => {
-    const today = new Date().toISOString().split("T")[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
-    if (dateStr === today) return "היום";
+    if (dateStr === todayStr) return "היום";
     if (dateStr === tomorrow) return "מחר";
     return new Date(dateStr + "T00:00:00").toLocaleDateString("he-IL", {
       weekday: "long", day: "numeric", month: "long",
@@ -49,6 +60,12 @@ export default function TasksPage() {
   const showTasks = filter === "all" || filter === "tasks";
   const showEvents = filter === "all" || filter === "events";
   const showProjects = filter === "all" || filter === "projects";
+
+  const completedVisible =
+    filter === "tasks" ? completedTasks
+    : filter === "events" ? completedEvents
+    : filter === "all" ? [...completedTasks, ...completedEvents]
+    : [];
 
   return (
     <div className="px-4 pt-6">
@@ -68,7 +85,7 @@ export default function TasksPage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex bg-white rounded-xl p-1 mb-5 shadow-sm border border-slate-100">
+      <div className="flex bg-white rounded-xl p-1 mb-3 shadow-sm border border-slate-100">
         {([
           { key: "all", label: "הכל" },
           { key: "tasks", label: "✅ משימות" },
@@ -87,6 +104,48 @@ export default function TasksPage() {
         ))}
       </div>
 
+      {/* Member filter */}
+      {members.length > 0 && filter !== "projects" && (
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+          <button
+            onClick={() => setMemberFilter(null)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              !memberFilter
+                ? "bg-slate-800 text-white border-slate-800"
+                : "bg-white text-slate-500 border-slate-200"
+            }`}
+          >
+            כולם
+          </button>
+          {members.map((member) => {
+            const selected = memberFilter === member.id;
+            return (
+              <button
+                key={member.id}
+                onClick={() => setMemberFilter(selected ? null : member.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                  selected
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-200"
+                }`}
+              >
+                <span
+                  className={`w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center ${
+                    selected ? "bg-blue-500" : memberColor(member.id)
+                  }`}
+                >
+                  {member.name[0]}
+                </span>
+                {member.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {!loaded && <TaskListSkeleton count={4} />}
+
       {/* Empty state */}
       {loaded && tasks.filter((t) => !t.completed).length === 0 && projects.length === 0 && (
         <div className="text-center py-14 text-slate-400">
@@ -102,7 +161,7 @@ export default function TasksPage() {
       )}
 
       {/* Projects section */}
-      {showProjects && projects.length > 0 && (
+      {loaded && showProjects && projects.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2 px-1">
             <FolderOpen size={15} className="text-slate-500" />
@@ -132,7 +191,7 @@ export default function TasksPage() {
         </div>
       )}
 
-      {filter === "projects" && projects.length === 0 && (
+      {loaded && filter === "projects" && projects.length === 0 && (
         <div className="text-center py-14 text-slate-400">
           <FolderOpen size={52} className="mx-auto mb-3 opacity-25" />
           <p className="font-semibold text-slate-500">אין פרויקטים עדיין</p>
@@ -146,7 +205,7 @@ export default function TasksPage() {
       )}
 
       {/* Tasks section */}
-      {showTasks && pendingTasks.length > 0 && (
+      {loaded && showTasks && pendingTasks.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2 px-1">
             <CheckSquare size={15} className="text-slate-500" />
@@ -156,39 +215,67 @@ export default function TasksPage() {
           </div>
           <div className="space-y-2">
             {pendingTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onEdit={setEditTask}
+                members={members}
+              />
             ))}
           </div>
         </div>
       )}
 
       {/* Events section */}
-      {showEvents && Object.entries(groupedEvents).map(([date, dateTasks]) => (
-        <div key={date} className="mb-5">
-          <div className="flex items-center gap-3 mb-2 px-1">
-            <CalendarDays size={15} className="text-blue-500" />
-            <span className="text-sm font-bold text-slate-600">{formatGroupDate(date)}</span>
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium">{dateTasks.length}</span>
+      {loaded && showEvents && Object.entries(groupedEvents).map(([date, dateTasks]) => {
+        const isOverdueGroup = date < todayStr;
+        return (
+          <div key={date} className="mb-5">
+            <div className="flex items-center gap-3 mb-2 px-1">
+              <CalendarDays size={15} className={isOverdueGroup ? "text-red-500" : "text-blue-500"} />
+              <span className={`text-sm font-bold ${isOverdueGroup ? "text-red-600" : "text-slate-600"}`}>
+                {formatGroupDate(date)}
+                {isOverdueGroup && " · באיחור"}
+              </span>
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-xs text-slate-400 font-medium">{dateTasks.length}</span>
+            </div>
+            <div className="space-y-2">
+              {dateTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onToggle={toggleTask}
+                  onDelete={deleteTask}
+                  onEdit={setEditTask}
+                  members={members}
+                />
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {dateTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Completed */}
-      {filter !== "all" && filter !== "projects" && (completedTasks.length > 0 || completedEvents.length > 0) && (
+      {loaded && completedVisible.length > 0 && (
         <div className="mt-2 opacity-50">
           <div className="flex items-center gap-3 mb-2 px-1">
             <span className="text-sm font-bold text-slate-400">הושלמו</span>
             <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400 font-medium">{completedVisible.length}</span>
           </div>
           <div className="space-y-2">
-            {(filter === "tasks" ? completedTasks : completedEvents).map((task) => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+            {completedVisible.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onEdit={setEditTask}
+                members={members}
+              />
             ))}
           </div>
         </div>
@@ -197,8 +284,19 @@ export default function TasksPage() {
       <div className="h-6" />
 
       {showTaskModal && <AddTaskModal onAdd={addTask} onClose={() => setShowTaskModal(false)} />}
+      {editTask && (
+        <AddTaskModal
+          task={editTask}
+          onAdd={addTask}
+          onUpdate={updateTask}
+          onClose={() => setEditTask(null)}
+        />
+      )}
       {showProjectModal && (
         <AddProjectModal onAdd={addProject} onClose={() => setShowProjectModal(false)} />
+      )}
+      {lastDeleted && (
+        <UndoToast message={`"${lastDeleted.title}" נמחק`} onUndo={undoDelete} />
       )}
     </div>
   );

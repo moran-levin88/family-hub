@@ -32,6 +32,21 @@ export interface Member {
   googleTokens?: GoogleTokens;
 }
 
+export const MEMBER_AVATAR_COLORS = [
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-purple-500",
+  "bg-orange-500",
+  "bg-pink-500",
+  "bg-cyan-500",
+] as const;
+
+export function memberColor(memberId: string): string {
+  let hash = 0;
+  for (const ch of memberId) hash = (hash + ch.charCodeAt(0)) % MEMBER_AVATAR_COLORS.length;
+  return MEMBER_AVATAR_COLORS[hash];
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -41,6 +56,7 @@ export interface Task {
   endTime?: string;
   completed: boolean;
   createdAt: string;
+  createdBy?: string;
   assignedTo?: string[];
   projectId?: string;
   calendarEventIds?: Record<string, string>;

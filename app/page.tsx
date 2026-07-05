@@ -3,19 +3,37 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTasks } from "@/hooks/useTasks";
 import { useShopping } from "@/hooks/useShopping";
+import { useMembers } from "@/hooks/useMembers";
+import { Task } from "@/types";
 import TaskCard from "@/components/TaskCard";
 import ShoppingItemRow from "@/components/ShoppingItemRow";
 import AddTaskModal from "@/components/AddTaskModal";
 import AddShoppingModal from "@/components/AddShoppingModal";
-import { Plus, ShoppingCart, CalendarDays, ChevronLeft } from "lucide-react";
+import UndoToast from "@/components/UndoToast";
+import { TaskListSkeleton, ShoppingListSkeleton } from "@/components/Skeletons";
+import { Plus, ShoppingCart, CalendarDays, ChevronLeft, AlertTriangle } from "lucide-react";
 
 export default function DashboardPage() {
-  const { tasks, toggleTask, deleteTask, addTask, getUpcomingEvents, getPendingTasks } = useTasks();
-  const { items, toggleItem, deleteItem, addItem, getPendingCount } = useShopping();
+  const {
+    loaded: tasksLoaded,
+    toggleTask,
+    deleteTask,
+    addTask,
+    updateTask,
+    undoDelete,
+    lastDeleted,
+    getUpcomingEvents,
+    getOverdueEvents,
+    getPendingTasks,
+  } = useTasks();
+  const { items, loaded: shoppingLoaded, toggleItem, deleteItem, addItem, getPendingCount } = useShopping();
+  const { members } = useMembers();
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showShoppingModal, setShowShoppingModal] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
 
   const upcomingEvents = getUpcomingEvents(3);
+  const overdueEvents = getOverdueEvents();
   const pendingTasks = getPendingTasks();
   const pendingItems = items.filter((i) => !i.purchased).slice(0, 5);
 
@@ -48,12 +66,18 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-blue-600 rounded-2xl p-4 text-white shadow-lg shadow-blue-200">
           <p className="text-blue-200 text-xs font-medium">אירועים קרובים</p>
-          <p className="text-4xl font-bold mt-1 leading-none">{upcomingEvents.length}</p>
-          <p className="text-blue-200 text-xs mt-2">{pendingTasks.length} משימות פתוחות</p>
+          <p className="text-4xl font-bold mt-1 leading-none">
+            {tasksLoaded ? upcomingEvents.length : "–"}
+          </p>
+          <p className="text-blue-200 text-xs mt-2">
+            {tasksLoaded ? `${pendingTasks.length} משימות פתוחות` : "טוען..."}
+          </p>
         </div>
         <div className="bg-emerald-500 rounded-2xl p-4 text-white shadow-lg shadow-emerald-200">
           <p className="text-emerald-100 text-xs font-medium">רשימת קניות</p>
-          <p className="text-4xl font-bold mt-1 leading-none">{getPendingCount()}</p>
+          <p className="text-4xl font-bold mt-1 leading-none">
+            {shoppingLoaded ? getPendingCount() : "–"}
+          </p>
           <p className="text-emerald-100 text-xs mt-2">פריטים לקניה</p>
         </div>
       </div>
@@ -76,8 +100,40 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Loading skeleton */}
+      {!tasksLoaded && (
+        <section className="mb-7">
+          <div className="h-5 w-32 bg-slate-100 rounded-md mb-3 animate-pulse" />
+          <TaskListSkeleton count={3} />
+        </section>
+      )}
+
+      {/* Overdue events */}
+      {tasksLoaded && overdueEvents.length > 0 && (
+        <section className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-red-600 text-lg flex items-center gap-2">
+              <AlertTriangle size={20} />
+              באיחור
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {overdueEvents.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onEdit={setEditTask}
+                members={members}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Pending tasks (no date) */}
-      {pendingTasks.length > 0 && (
+      {tasksLoaded && pendingTasks.length > 0 && (
         <section className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
@@ -89,52 +145,63 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-2">
             {pendingTasks.slice(0, 3).map((task) => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onEdit={setEditTask}
+                members={members}
+              />
             ))}
           </div>
         </section>
       )}
 
       {/* Upcoming events (with date) */}
-      <section className="mb-7">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-            <CalendarDays size={20} className="text-blue-600" />
-            אירועים קרובים
-          </h2>
-          <Link
-            href="/tasks"
-            className="text-blue-600 text-sm font-medium flex items-center gap-0.5"
-          >
-            הכל
-            <ChevronLeft size={15} />
-          </Link>
-        </div>
-
-        {upcomingEvents.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center text-slate-400 border border-slate-100">
-            <CalendarDays size={36} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm font-medium">אין אירועים קרובים</p>
-            <button
-              onClick={() => setShowTaskModal(true)}
-              className="mt-2 text-blue-600 text-xs font-semibold"
+      {tasksLoaded && (
+        <section className="mb-7">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+              <CalendarDays size={20} className="text-blue-600" />
+              אירועים קרובים
+            </h2>
+            <Link
+              href="/tasks"
+              className="text-blue-600 text-sm font-medium flex items-center gap-0.5"
             >
-              הוסף עכשיו
-            </button>
+              הכל
+              <ChevronLeft size={15} />
+            </Link>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {upcomingEvents.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onToggle={toggleTask}
-                onDelete={deleteTask}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+
+          {upcomingEvents.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 text-center text-slate-400 border border-slate-100">
+              <CalendarDays size={36} className="mx-auto mb-2 opacity-30" />
+              <p className="text-sm font-medium">אין אירועים קרובים</p>
+              <button
+                onClick={() => setShowTaskModal(true)}
+                className="mt-2 text-blue-600 text-xs font-semibold"
+              >
+                הוסף עכשיו
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {upcomingEvents.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onToggle={toggleTask}
+                  onDelete={deleteTask}
+                  onEdit={setEditTask}
+                  members={members}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Shopping preview */}
       <section className="mb-6">
@@ -152,7 +219,9 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {pendingItems.length === 0 ? (
+        {!shoppingLoaded ? (
+          <ShoppingListSkeleton count={3} />
+        ) : pendingItems.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center text-slate-400 border border-slate-100">
             <ShoppingCart size={36} className="mx-auto mb-2 opacity-30" />
             <p className="text-sm font-medium">הרשימה ריקה</p>
@@ -190,12 +259,23 @@ export default function DashboardPage() {
       {showTaskModal && (
         <AddTaskModal onAdd={addTask} onClose={() => setShowTaskModal(false)} />
       )}
+      {editTask && (
+        <AddTaskModal
+          task={editTask}
+          onAdd={addTask}
+          onUpdate={updateTask}
+          onClose={() => setEditTask(null)}
+        />
+      )}
       {showShoppingModal && (
         <AddShoppingModal
           onAdd={addItem}
           onClose={() => setShowShoppingModal(false)}
           existingItems={items}
         />
+      )}
+      {lastDeleted && (
+        <UndoToast message={`"${lastDeleted.title}" נמחק`} onUndo={undoDelete} />
       )}
     </div>
   );

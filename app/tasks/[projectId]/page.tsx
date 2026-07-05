@@ -3,17 +3,21 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
+import { useMembers } from "@/hooks/useMembers";
 import TaskCard from "@/components/TaskCard";
 import AddTaskModal from "@/components/AddTaskModal";
-import { PROJECT_COLORS } from "@/types";
+import UndoToast from "@/components/UndoToast";
+import { PROJECT_COLORS, Task } from "@/types";
 import { ArrowRight, Plus, CheckCircle2, Trash2 } from "lucide-react";
 
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const router = useRouter();
-  const { tasks, toggleTask, deleteTask, addTask } = useTasks();
+  const { tasks, toggleTask, deleteTask, addTask, updateTask, undoDelete, lastDeleted } = useTasks();
   const { projects, deleteProject } = useProjects();
+  const { members } = useMembers();
   const [showModal, setShowModal] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
 
   const project = projects.find((p) => p.id === projectId);
   const projectTasks = tasks.filter((t) => t.projectId === projectId);
@@ -102,7 +106,14 @@ export default function ProjectPage() {
       {pending.length > 0 && (
         <div className="mb-5 space-y-2">
           {pending.map((task) => (
-            <TaskCard key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onToggle={toggleTask}
+              onDelete={deleteTask}
+              onEdit={setEditTask}
+              members={members}
+            />
           ))}
         </div>
       )}
@@ -116,7 +127,14 @@ export default function ProjectPage() {
           </div>
           <div className="space-y-2">
             {completed.map((task) => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onEdit={setEditTask}
+                members={members}
+              />
             ))}
           </div>
         </div>
@@ -126,6 +144,18 @@ export default function ProjectPage() {
 
       {showModal && (
         <AddTaskModal onAdd={handleAddTask} onClose={() => setShowModal(false)} taskOnly />
+      )}
+      {editTask && (
+        <AddTaskModal
+          task={editTask}
+          onAdd={handleAddTask}
+          onUpdate={updateTask}
+          onClose={() => setEditTask(null)}
+          taskOnly
+        />
+      )}
+      {lastDeleted && (
+        <UndoToast message={`"${lastDeleted.title}" נמחק`} onUndo={undoDelete} />
       )}
     </div>
   );
