@@ -1,16 +1,17 @@
 import { google } from "googleapis";
 import type { GoogleTokens } from "@/types";
 
-export function getOAuthClient() {
+export function getOAuthClient(origin?: string) {
+  const base = origin ?? process.env.NEXT_PUBLIC_APP_URL;
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
+    `${base}/api/auth/google/callback`
   );
 }
 
-export function getAuthUrl(memberId: string): string {
-  const client = getOAuthClient();
+export function getAuthUrl(memberId: string, origin?: string): string {
+  const client = getOAuthClient(origin);
   return client.generateAuthUrl({
     access_type: "offline",
     scope: ["https://www.googleapis.com/auth/calendar.events"],
@@ -19,8 +20,8 @@ export function getAuthUrl(memberId: string): string {
   });
 }
 
-export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
-  const client = getOAuthClient();
+export async function exchangeCodeForTokens(code: string, origin?: string): Promise<GoogleTokens> {
+  const client = getOAuthClient(origin);
   const { tokens } = await client.getToken(code);
   return tokens as GoogleTokens;
 }
